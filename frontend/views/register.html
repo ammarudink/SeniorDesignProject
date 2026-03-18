@@ -1,0 +1,72 @@
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow-lg border-0 rounded-lg mt-5">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">Create Account</h3>
+                        <form id="registerForm" novalidate>
+                            <div class="mb-3">
+                                <label for="registerName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="registerName" name="Name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="registerEmail" name="Email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerAddress" class="form-label">Address</label>
+                                <input type="text" class="form-control" id="registerAddress" name="Address" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="password" name="Password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                <input type="password" class="form-control" id="confirmPassword" name="ConfirmPassword" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerRole" class="form-label">Role</label>
+                                <select class="form-select" id="registerRole" name="Role" required>
+                                    <option value="Customer" selected>Customer</option>
+                                    <option value="Admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="mb-3" id="adminPasswordField" style="display: none;">
+                                <label for="adminPassword" class="form-label">Admin Password</label>
+                                <input type="password" class="form-control" id="adminPassword" name="adminPassword">
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-custom btn-lg">
+                                    <span class="normal-text">Create Account</span>
+                                    <span class="loading-text d-none">
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        Creating Account...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center py-3">
+                        <div class="small">
+                            <a href="#login" class="text-decoration-none text-custom">Have an account? Go to login</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<script>
+    var app = $.spapp({
+        defaultView: "#register",
+        templateDir: "frontend/views/"
+    });
+    app.route({
+        view: "register",
+        load: function() {
+            UserService.init();
+        }
+    });
+</script>

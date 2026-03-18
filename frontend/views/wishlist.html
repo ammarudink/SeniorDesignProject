@@ -1,0 +1,19 @@
+<div class="container py-5">
+    <h2 class="mb-4 text-center">Your Wishlist</h2>
+    <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center" id="wishlist-items">
+        <!-- Wishlist items will be dynamically added here -->
+    </div>
+</div>
+<script>
+    var app = $.spapp({
+        defaultView: "#wishlist",
+        templateDir: "frontend/views/"
+    });
+    app.route({
+        view: "wishlist",
+        onReady: function() {
+            updateWishlistPage();
+        }
+    });
+    app.run();
+</script>

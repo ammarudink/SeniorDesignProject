@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  Customer
+  Admin
+}
+
+enum OrderStatus {
+  Pending
+  Shipped
+  Delivered
+  Cancelled
+}
+
+enum PaymentState {
+  Pending
+  Completed
+  Failed
+}
+
+model User {
+  UserID        Int            @id @default(autoincrement()) @map("UserID")
+  Name          String         @db.VarChar(100)
+  Email         String         @unique(map: "Email") @db.VarChar(255)
+  Password      String         @db.VarChar(255)
+  Address       String         @db.VarChar(255)
+  Role          UserRole       @default(Customer)
+  CartItems     CartItem[]
+  WishlistItems WishlistItem[]
+  Orders        Order[]
+  Payments      Payment[]
+
+  @@map("users")
+}
+
+model Product {
+  ProductID     Int            @id @default(autoincrement()) @map("ProductID")
+  Name          String         @db.VarChar(255)
+  Price         Decimal        @db.Decimal(10, 2)
+  SalePrice     Decimal?       @db.Decimal(10, 2)
+  Category      String         @db.VarChar(100)
+  Images        String         @db.VarChar(255)
+  Description   String         @db.VarChar(255)
+  CartItems     CartItem[]
+  WishlistItems WishlistItem[]
+  OrderItems    OrderItem[]
+
+  @@map("products")
+}
+
+model CartItem {
+  CartID    Int      @id @default(autoincrement()) @map("CartID")
+  UserID    Int?     @map("UserID")
+  ProductID Int?     @map("ProductID")
+  Quantity  Int      @default(1)
+  AddedAt   DateTime @default(now()) @map("AddedAt") @db.DateTime(0)
+  User      User?    @relation(fields: [UserID], references: [UserID])
+  Product   Product? @relation(fields: [ProductID], references: [ProductID])
+
+  @@index([UserID], map: "UserID")
+  @@index([ProductID], map: "ProductID")
+  @@map("cart")
+}
+
+model WishlistItem {
+  WishlistID Int      @id @default(autoincrement()) @map("WishlistID")
+  UserID     Int?     @map("UserID")
+  ProductID  Int?     @map("ProductID")
+  User       User?    @relation(fields: [UserID], references: [UserID])
+  Product    Product? @relation(fields: [ProductID], references: [ProductID])
+
+  @@index([UserID], map: "UserID")
+  @@index([ProductID], map: "ProductID")
+  @@map("wishlist")
+}
+
+model Order {
+  OrderID     Int         @id @default(autoincrement()) @map("OrderID")
+  UserID      Int?        @map("UserID")
+  TotalAmount Decimal     @db.Decimal(10, 2)
+  Status      OrderStatus @default(Pending)
+  User        User?       @relation(fields: [UserID], references: [UserID])
+  OrderItems  OrderItem[]
+  Payments    Payment[]
+
+  @@index([UserID], map: "UserID")
+  @@map("orders")
+}
+
+model OrderItem {
+  OrderItemID Int      @id @default(autoincrement()) @map("OrderItemID")
+  OrderID     Int?     @map("OrderID")
+  ProductID   Int?     @map("ProductID")
+  Quantity    Int
+  Price       Decimal  @db.Decimal(10, 2)
+  Order       Order?   @relation(fields: [OrderID], references: [OrderID])
+  Product     Product? @relation(fields: [ProductID], references: [ProductID])
+
+  @@index([OrderID], map: "OrderID")
+  @@index([ProductID], map: "ProductID")
+  @@map("order_items")
+}
+
+model Payment {
+  PaymentID     Int          @id @default(autoincrement()) @map("PaymentID")
+  OrderID       Int?         @map("OrderID")
+  UserID        Int?         @map("UserID")
+  Amount        Decimal      @db.Decimal(10, 2)
+  PaymentMethod String       @map("PaymentMethod") @db.VarChar(50)
+  PaymentStatus PaymentState @map("PaymentStatus") @default(Pending)
+  Order         Order?       @relation(fields: [OrderID], references: [OrderID])
+  User          User?        @relation(fields: [UserID], references: [UserID])
+
+  @@index([OrderID], map: "OrderID")
+  @@index([UserID], map: "UserID")
+  @@map("payments")
+}

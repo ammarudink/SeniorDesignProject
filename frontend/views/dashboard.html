@@ -1,0 +1,33 @@
+<header class="bg-dark py-5">
+    <div class="container px-4 px-lg-5 my-5">
+        <div class="text-center text-white">
+            <h1 class="display-4 fw-bolder">Welcome to TechGear</h1>
+            <p class="lead fw-normal text-white-50 mb-0">BEST COMPONENTS AND PRICES</p>
+        </div>
+    </div>
+</header>
+<section class="py-5">
+    <div class="container px-4 px-lg-5 mt-5">
+        <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center" id="dashboard-items">
+            <!-- Dashboard items will be dynamically inserted here -->
+        </div>
+    </div>
+</section>
+<script>
+    var app = $.spapp({
+        defaultView: "#dashboard",
+        templateDir: "frontend/views/"
+    });
+    app.route({
+        view: "dashboard",
+        onReady: function() {
+            if (!Utils.isLoggedIn()) {
+                window.location.hash = '#login';
+                return;
+            }
+            ProductService.getDashboardProducts();
+            updateCartCount();
+        }
+    });
+    app.run();
+</script>

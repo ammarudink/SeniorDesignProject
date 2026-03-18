@@ -1,0 +1,12 @@
+# Node / build artifacts
+backend/node_modules/
+backend/dist/
+backend/coverage/
+backend/*.log
+backend/.env
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

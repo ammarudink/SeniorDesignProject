@@ -1,0 +1,50 @@
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-lg border-0 rounded-lg mt-5">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4">Login</h3>
+                        <form id="loginForm" novalidate>
+                            <div class="mb-3">
+                                <label for="loginEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="loginEmail" name="Email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">Password</label>
+                                <input type="password" class="form-control" id="loginPassword" name="Password" required>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-custom btn-lg">
+                                    <span class="normal-text">Login</span>
+                                    <span class="loading-text d-none">
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        Loading...
+                                    </span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center py-3">
+                        <div class="small">
+                            <a href="#register" class="text-decoration-none text-custom">Need an account? Sign up!</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    var app = $.spapp({
+        defaultView: "#login",
+        templateDir: "frontend/views/"
+    });
+    app.route({
+        view: "login",
+        load: function() {
+            UserService.init();
+        }
+    });
+</script>

@@ -1,0 +1,22 @@
+<div class="container mt-5">
+    <h1 class="text-center">On Sale Items</h1>
+    <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center" id="onsale-items">
+        <!-- Items will be dynamically inserted here -->
+    </div>
+</div>
+<script>
+    var app = $.spapp({
+        defaultView: "#onsale",
+        templateDir: "frontend/views/"
+    });
+    app.route({
+        view: "onsale",
+        onReady: function() {
+            fetchOnSaleItems();
+            updateCartCount();
+            attachAddToCartListeners();
+            attachProductLinkListeners();
+        }
+    });
+    app.run();
+</script>
