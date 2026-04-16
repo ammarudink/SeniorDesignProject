@@ -11,6 +11,15 @@ export const registerSchema = z
     Role: z.enum([ROLES.ADMIN, ROLES.CUSTOMER]).default(ROLES.CUSTOMER),
     AdminPassword: z.string().optional(),
   })
+  .superRefine((data, ctx) => {
+    if (data.Role === ROLES.ADMIN && !data.AdminPassword?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "AdminPassword is required when Role is Admin",
+        path: ["AdminPassword"],
+      });
+    }
+  })
   .refine(
     (data) => !data.ConfirmPassword || data.Password === data.ConfirmPassword,
     {

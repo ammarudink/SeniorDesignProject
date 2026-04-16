@@ -1,10 +1,11 @@
 import { Prisma, Product } from "@prisma/client";
 import { prisma } from "../config/prisma";
-import { ORDER_STATUSES } from "../constants/roles";
+import { ORDER_STATUSES, PAYMENT_STATUSES } from "../constants/roles";
 import { CartRepository } from "../repositories/cart.repository";
 import { OrderRepository } from "../repositories/order.repository";
 import { ProductRepository } from "../repositories/product.repository";
 import { ApiError } from "../utils/api-error";
+import { validatePaymentPayload } from "../utils/payment-validation";
 import { serializeOrder } from "../utils/serializers";
 
 type OrderItemInput = {
@@ -15,6 +16,10 @@ type OrderItemInput = {
 type CreateOrderInput = {
   items?: OrderItemInput[];
   useCart?: boolean;
+  paymentMethod: string;
+  CardNumber?: string;
+  ExpirationDate?: string;
+  Cvc?: string;
 };
 
 type OrderStatus = (typeof ORDER_STATUSES)[keyof typeof ORDER_STATUSES];
@@ -56,6 +61,17 @@ export class OrderService {
   }
 
   async createOrder(userId: number, payload: CreateOrderInput) {
+    try {
+      validatePaymentPayload({
+        PaymentMethod: payload.paymentMethod,
+        CardNumber: payload.CardNumber,
+        ExpirationDate: payload.ExpirationDate,
+        Cvc: payload.Cvc,
+      });
+    } catch (reason) {
+      throw new ApiError(400, reason instanceof Error ? reason.message : "Invalid payment details");
+    }
+
     const items =
       payload.useCart || !payload.items?.length
         ? await this.cartRepository.findByUserId(userId)
@@ -108,6 +124,14 @@ export class OrderService {
               Quantity: item.Quantity,
               Price: new Prisma.Decimal(Number(item.Product.SalePrice ?? item.Product.Price)),
             })),
+          },
+          Payments: {
+            create: {
+              User: { connect: { UserID: userId } },
+              Amount: new Prisma.Decimal(totalAmount),
+              PaymentMethod: payload.paymentMethod,
+              PaymentStatus: PAYMENT_STATUSES.COMPLETED,
+            },
           },
         },
         include: {

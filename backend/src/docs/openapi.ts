@@ -34,7 +34,19 @@ export const openApiSpec = swaggerJSDoc({
             Password: { type: "string", example: "secret123" },
             Address: { type: "string", example: "123 Main Street" },
             Role: { type: "string", enum: ["Admin", "Customer"], example: "Customer" },
-            AdminPassword: { type: "string", example: "adminadmin" }
+            AdminPassword: {
+              type: "string",
+              description: "Required only when Role is Admin. Leave empty or omit for Customer.",
+              example: ""
+            }
+          },
+          example: {
+            Name: "John Doe",
+            Email: "john@example.com",
+            Password: "secret123",
+            Address: "123 Main Street",
+            Role: "Customer",
+            AdminPassword: ""
           }
         },
         AuthLoginInput: {
@@ -59,8 +71,17 @@ export const openApiSpec = swaggerJSDoc({
         },
         OrderInput: {
           type: "object",
+          required: ["paymentMethod"],
           properties: {
             useCart: { type: "boolean", example: true },
+            paymentMethod: {
+              type: "string",
+              enum: ["cash", "bank-transfer", "credit-card"],
+              example: "credit-card"
+            },
+            CardNumber: { type: "string", example: "4111111111111111" },
+            ExpirationDate: { type: "string", example: "12/28" },
+            Cvc: { type: "string", example: "123" },
             items: {
               type: "array",
               items: {
@@ -84,8 +105,30 @@ export const openApiSpec = swaggerJSDoc({
               example: "credit-card"
             },
             CardNumber: { type: "string", example: "4111111111111111" },
-            ExpiryDate: { type: "string", example: "12/28" },
+            ExpirationDate: { type: "string", example: "12/28" },
             Cvc: { type: "string", example: "123" }
+          }
+        },
+        CartAddInput: {
+          type: "object",
+          required: ["productId"],
+          properties: {
+            productId: { type: "integer", example: 1 },
+            quantity: { type: "integer", example: 1 }
+          }
+        },
+        CartUpdateInput: {
+          type: "object",
+          required: ["quantity"],
+          properties: {
+            quantity: { type: "integer", example: 2 }
+          }
+        },
+        WishlistAddInput: {
+          type: "object",
+          required: ["productId"],
+          properties: {
+            productId: { type: "integer", example: 1 }
           }
         }
       }
@@ -101,7 +144,30 @@ export const openApiSpec = swaggerJSDoc({
             required: true,
             content: {
               "application/json": {
-                schema: { $ref: "#/components/schemas/AuthRegisterInput" }
+                schema: { $ref: "#/components/schemas/AuthRegisterInput" },
+                examples: {
+                  customer: {
+                    summary: "Customer registration",
+                    value: {
+                      Name: "John Doe",
+                      Email: "john@example.com",
+                      Password: "secret123",
+                      Address: "123 Main Street",
+                      Role: "Customer"
+                    }
+                  },
+                  admin: {
+                    summary: "Admin registration",
+                    value: {
+                      Name: "Admin User",
+                      Email: "admin@example.com",
+                      Password: "secret123",
+                      Address: "123 Main Street",
+                      Role: "Admin",
+                      AdminPassword: ""
+                    }
+                  }
+                }
               }
             }
           },
@@ -145,21 +211,6 @@ export const openApiSpec = swaggerJSDoc({
             "200": { description: "Product list" }
           }
         },
-        post: {
-          tags: ["Products"],
-          summary: "Create a new product",
-          requestBody: {
-            required: true,
-            content: {
-              "application/json": {
-                schema: { $ref: "#/components/schemas/ProductInput" }
-              }
-            }
-          },
-          responses: {
-            "201": { description: "Product created" }
-          }
-        }
       },
       "/products/dashboard": {
         get: {
@@ -176,15 +227,6 @@ export const openApiSpec = swaggerJSDoc({
           summary: "List all product categories",
           responses: {
             "200": { description: "Category list" }
-          }
-        }
-      },
-      "/products/related": {
-        get: {
-          tags: ["Products"],
-          summary: "Get related products by category",
-          responses: {
-            "200": { description: "Related products" }
           }
         }
       },
@@ -217,16 +259,6 @@ export const openApiSpec = swaggerJSDoc({
             "200": { description: "Product updated" }
           }
         },
-        delete: {
-          tags: ["Products"],
-          summary: "Delete a product",
-          parameters: [
-            { in: "path", name: "productId", required: true, schema: { type: "integer" } }
-          ],
-          responses: {
-            "204": { description: "Product deleted" }
-          }
-        }
       },
       "/users": {
         get: {
@@ -246,16 +278,6 @@ export const openApiSpec = swaggerJSDoc({
           ],
           responses: {
             "200": { description: "User details" }
-          }
-        },
-        patch: {
-          tags: ["Users"],
-          summary: "Update a user",
-          parameters: [
-            { in: "path", name: "userId", required: true, schema: { type: "integer" } }
-          ],
-          responses: {
-            "200": { description: "User updated" }
           }
         },
         delete: {
@@ -280,6 +302,14 @@ export const openApiSpec = swaggerJSDoc({
         post: {
           tags: ["Cart"],
           summary: "Add an item to cart",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CartAddInput" }
+              }
+            }
+          },
           responses: {
             "201": { description: "Cart item created" }
           }
@@ -299,6 +329,14 @@ export const openApiSpec = swaggerJSDoc({
           parameters: [
             { in: "path", name: "cartId", required: true, schema: { type: "integer" } }
           ],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/CartUpdateInput" }
+              }
+            }
+          },
           responses: {
             "200": { description: "Cart item updated" }
           }
@@ -325,6 +363,14 @@ export const openApiSpec = swaggerJSDoc({
         post: {
           tags: ["Wishlist"],
           summary: "Add a product to wishlist",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/WishlistAddInput" }
+              }
+            }
+          },
           responses: {
             "201": { description: "Wishlist item added" }
           }

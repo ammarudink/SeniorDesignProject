@@ -2,19 +2,14 @@ import { PAYMENT_METHODS, PAYMENT_STATUSES, ROLES } from "../constants/roles";
 import { OrderRepository } from "../repositories/order.repository";
 import { PaymentRepository } from "../repositories/payment.repository";
 import { ApiError } from "../utils/api-error";
+import { validatePaymentPayload } from "../utils/payment-validation";
 
 type CreatePaymentInput = {
   OrderID: number;
   PaymentMethod: string;
   CardNumber?: string;
-  ExpiryDate?: string;
+  ExpirationDate?: string;
   Cvc?: string;
-};
-
-const isExpired = (expiryDate: string) => {
-  const [month, year] = expiryDate.split("/");
-  const expiry = new Date(Number(`20${year}`), Number(month), 0, 23, 59, 59);
-  return expiry.getTime() < Date.now();
 };
 
 export class PaymentService {
@@ -61,8 +56,10 @@ export class PaymentService {
     }
 
     if (payload.PaymentMethod === PAYMENT_METHODS.CREDIT_CARD) {
-      if (!payload.ExpiryDate || isExpired(payload.ExpiryDate)) {
-        throw new ApiError(400, "Card expiry date is invalid or expired");
+      try {
+        validatePaymentPayload(payload);
+      } catch (reason) {
+        throw new ApiError(400, reason instanceof Error ? reason.message : "Invalid payment details");
       }
     }
 
