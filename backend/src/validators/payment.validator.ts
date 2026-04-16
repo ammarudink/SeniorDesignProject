@@ -10,7 +10,7 @@ export const createPaymentSchema = z
       PAYMENT_METHODS.CREDIT_CARD,
     ]),
     CardNumber: z.string().regex(/^\d{16}$/).optional(),
-    ExpiryDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/).optional(),
+    ExpirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/).optional(),
     Cvc: z.string().regex(/^\d{3}$/).optional(),
   })
   .superRefine((data, ctx) => {
@@ -26,11 +26,11 @@ export const createPaymentSchema = z
       });
     }
 
-    if (!data.ExpiryDate) {
+    if (!data.ExpirationDate) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "ExpiryDate is required for credit-card payments",
-        path: ["ExpiryDate"],
+        message: "ExpirationDate is required for credit-card payments",
+        path: ["ExpirationDate"],
       });
     }
 
