@@ -97,17 +97,17 @@ function Navbar() {
               </ul>
             </li>
           </ul>
-          <div className="d-flex align-items-center gap-3">
-            <Link className="btn btn-outline-dark" to="/cart" onClick={closeNavigationUi}>
+          <div className="nav-actions d-flex flex-row flex-nowrap align-items-center gap-2 gap-lg-3 ms-lg-auto">
+            <Link className="btn btn-outline-dark min-h-11" to="/cart" onClick={closeNavigationUi}>
               <i className="bi-cart-fill me-1" /> Cart
               <span className="badge bg-dark text-white ms-1 rounded-pill">{cartCount}</span>
             </Link>
             {!isAuthenticated ? (
               <>
-                <Link className="btn btn-outline-dark login-nav-button" to="/login" onClick={closeNavigationUi}>
+                <Link className="btn btn-outline-dark login-nav-button min-h-11" to="/login" onClick={closeNavigationUi}>
                   Login
                 </Link>
-                <Link className="btn btn-dark text-white" to="/register" onClick={closeNavigationUi}>
+                <Link className="btn btn-dark text-white min-h-11" to="/register" onClick={closeNavigationUi}>
                   Register
                 </Link>
               </>

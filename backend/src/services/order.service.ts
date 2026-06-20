@@ -1,6 +1,6 @@
 import { Prisma, Product } from "@prisma/client";
 import { prisma } from "../config/prisma";
-import { ORDER_STATUSES, PAYMENT_STATUSES } from "../constants/roles";
+import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from "../constants/roles";
 import { CartRepository } from "../repositories/cart.repository";
 import { OrderRepository } from "../repositories/order.repository";
 import { ProductRepository } from "../repositories/product.repository";
@@ -29,6 +29,20 @@ type ResolvedOrderItem = {
   Quantity: number;
   Product: Product;
 };
+
+function getRequiredStockByProduct(items: ResolvedOrderItem[]) {
+  const requiredStock = new Map<number, { quantity: number; product: Product }>();
+
+  items.forEach((item) => {
+    const current = requiredStock.get(item.ProductID);
+    requiredStock.set(item.ProductID, {
+      product: item.Product,
+      quantity: (current?.quantity ?? 0) + item.Quantity,
+    });
+  });
+
+  return requiredStock;
+}
 
 export class OrderService {
   constructor(
@@ -61,15 +75,17 @@ export class OrderService {
   }
 
   async createOrder(userId: number, payload: CreateOrderInput) {
-    try {
-      validatePaymentPayload({
-        PaymentMethod: payload.paymentMethod,
-        CardNumber: payload.CardNumber,
-        ExpirationDate: payload.ExpirationDate,
-        Cvc: payload.Cvc,
-      });
-    } catch (reason) {
-      throw new ApiError(400, reason instanceof Error ? reason.message : "Invalid payment details");
+    if (payload.paymentMethod !== PAYMENT_METHODS.STRIPE) {
+      try {
+        validatePaymentPayload({
+          PaymentMethod: payload.paymentMethod,
+          CardNumber: payload.CardNumber,
+          ExpirationDate: payload.ExpirationDate,
+          Cvc: payload.Cvc,
+        });
+      } catch (reason) {
+        throw new ApiError(400, reason instanceof Error ? reason.message : "Invalid payment details");
+      }
     }
 
     const items =
@@ -107,12 +123,44 @@ export class OrderService {
       };
     });
 
+    const requiredStock = getRequiredStockByProduct(resolvedItems);
+
+    requiredStock.forEach(({ product, quantity }) => {
+      if (product.Stock <= 0) {
+        throw new ApiError(400, `${product.Name} is out of stock`);
+      }
+
+      if (quantity > product.Stock) {
+        throw new ApiError(400, `Only ${product.Stock} ${product.Name} item(s) available in stock`);
+      }
+    });
+
     const totalAmount = resolvedItems.reduce((sum, item) => {
       const unitPrice = Number(item.Product.SalePrice ?? item.Product.Price);
       return sum + unitPrice * item.Quantity;
     }, 0);
 
     const order = await prisma.$transaction(async (tx) => {
+      for (const [productId, { product, quantity }] of requiredStock.entries()) {
+        const updateResult = await tx.product.updateMany({
+          where: {
+            ProductID: productId,
+            Stock: {
+              gte: quantity,
+            },
+          },
+          data: {
+            Stock: {
+              decrement: quantity,
+            },
+          },
+        });
+
+        if (updateResult.count !== 1) {
+          throw new ApiError(400, `Not enough stock available for ${product.Name}`);
+        }
+      }
+
       const createdOrder = await tx.order.create({
         data: {
           User: { connect: { UserID: userId } },
@@ -130,7 +178,10 @@ export class OrderService {
               User: { connect: { UserID: userId } },
               Amount: new Prisma.Decimal(totalAmount),
               PaymentMethod: payload.paymentMethod,
-              PaymentStatus: PAYMENT_STATUSES.COMPLETED,
+              PaymentStatus:
+                payload.paymentMethod === PAYMENT_METHODS.STRIPE
+                  ? PAYMENT_STATUSES.PENDING
+                  : PAYMENT_STATUSES.COMPLETED,
             },
           },
         },

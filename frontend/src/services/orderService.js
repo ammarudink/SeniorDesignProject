@@ -14,4 +14,13 @@ export const orderService = {
     });
     return response.data;
   },
+
+  async updateOrderStatus(orderId, status) {
+    const response = await apiRequest(`/orders/${orderId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: { Status: status },
+    });
+    return response.data;
+  },
 };

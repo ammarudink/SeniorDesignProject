@@ -64,6 +64,10 @@ export function AuthProvider({ children }) {
         persistSession({ token: authState.token, user });
         return user;
       },
+      completeExternalLogin(result) {
+        persistSession(result);
+        setAuthState({ token: result.token, user: result.user });
+      },
       logout() {
         clearSession();
         setAuthState({ token: null, user: null });

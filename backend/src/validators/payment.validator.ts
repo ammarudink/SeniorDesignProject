@@ -42,3 +42,8 @@ export const createPaymentSchema = z
       });
     }
   });
+
+export const createStripeCheckoutSessionSchema = z.object({
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});

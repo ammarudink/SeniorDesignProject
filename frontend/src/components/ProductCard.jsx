@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/useToast";
 import { useWishlist } from "@/hooks/useWishlist";
 import { resolveAssetPath } from "@/utils/assets";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, onWishlistChange }) {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const { addToCart } = useCart();
@@ -14,9 +14,16 @@ export default function ProductCard({ product }) {
 
   const onSale = Boolean(product.SalePrice);
   const wished = isInWishlist(product.ProductID);
+  const stock = Number(product.Stock ?? 0);
+  const outOfStock = stock <= 0;
 
   async function handleAddToCart(event) {
     event.preventDefault();
+    if (outOfStock) {
+      showToast("Product is out of stock", "danger");
+      return;
+    }
+
     if (!isAuthenticated) {
       navigate("/login");
       return;
@@ -43,56 +50,63 @@ export default function ProductCard({ product }) {
       } else {
         await addToWishlist(product.ProductID);
       }
+
+      await onWishlistChange?.(product.ProductID);
     } catch (error) {
       window.alert(error.message || "Failed to update wishlist");
     }
   }
 
   return (
-    <div className="col mb-5">
-      <div className="card h-100">
-        {onSale ? (
-          <div className="badge bg-dark text-white position-absolute" style={{ top: "0.5rem", right: "0.5rem" }}>
-            Sale
-          </div>
-        ) : null}
-        <Link to={`/products/${product.ProductID}`} className="text-decoration-none">
-          <img className="card-img-top" src={resolveAssetPath(product.Images)} alt={product.Name} />
+    <article className="product-card card h-100 overflow-hidden border shadow-sm">
+      <div className="product-card-media">
+        {onSale ? <span className="product-card-badge">Sale</span> : null}
+        {outOfStock ? <span className="product-card-stock-badge">Out of stock</span> : null}
+        <button
+          className="product-card-wishlist"
+          type="button"
+          onClick={handleWishlist}
+          aria-label={wished ? "Remove from wishlist" : "Add to wishlist"}
+        >
+          <img
+            src={wished ? "/assets/fheart.png" : "/assets/nfheart.png"}
+            alt=""
+            aria-hidden="true"
+          />
+        </button>
+        <Link to={`/products/${product.ProductID}`} className="product-card-image-link">
+          <img className="product-card-image" src={resolveAssetPath(product.Images)} alt={product.Name} />
         </Link>
-        <div className="card-body p-4">
-          <div className="text-center">
-            <Link to={`/products/${product.ProductID}`} className="text-decoration-none text-dark">
-              <h5 className="fw-bolder">{product.Name}</h5>
-            </Link>
-            <div className="price mb-3">
-              {onSale ? (
-                <>
-                  <span className="text-muted text-decoration-line-through">{product.Price}KM</span>{" "}
-                  {product.SalePrice}KM
-                </>
-              ) : (
-                <>{product.Price}KM</>
-              )}
-            </div>
-          </div>
+      </div>
+      <div className="card-body product-card-body">
+        <div className="product-card-category">{product.Category || "Product"}</div>
+        <Link to={`/products/${product.ProductID}`} className="product-card-title-link">
+          <h5 className="product-card-title">{product.Name}</h5>
+        </Link>
+        <div className="product-card-price">
+          {onSale ? (
+            <>
+              <span className="product-card-price-old">{product.Price}KM</span>
+              <span className="product-card-price-sale">{product.SalePrice}KM</span>
+            </>
+          ) : (
+            <span>{product.Price}KM</span>
+          )}
         </div>
-        <div className="card-footer p-4 pt-0 border-top-0 bg-transparent">
-          <div className="text-center">
-            <div className="d-flex justify-content-center align-items-center gap-2 mb-1">
-              <button className="btn btn-outline-dark" type="button" onClick={handleAddToCart}>
-                Add to cart
-              </button>
-              <button className="btn btn-link p-0" type="button" onClick={handleWishlist}>
-                <img
-                  src={wished ? "/assets/fheart.png" : "/assets/nfheart.png"}
-                  style={{ width: 24, height: 24, cursor: "pointer" }}
-                  alt="Add to wishlist"
-                />
-              </button>
-            </div>
-          </div>
+        <div className={`product-card-stock ${outOfStock ? "text-danger" : "text-muted"}`}>
+          {outOfStock ? "Unavailable" : `${stock} in stock`}
         </div>
       </div>
-    </div>
+      <div className="card-footer product-card-footer border-top-0 bg-transparent">
+        <button
+          className="btn btn-dark min-h-11 w-100"
+          type="button"
+          onClick={handleAddToCart}
+          disabled={outOfStock}
+        >
+          {outOfStock ? "Out of stock" : "Add to cart"}
+        </button>
+      </div>
+    </article>
   );
 }

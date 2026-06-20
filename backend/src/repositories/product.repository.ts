@@ -5,15 +5,30 @@ type ProductFilters = {
   search?: string;
   categories?: string[];
   onSale?: boolean;
+  sort?: string;
   skip?: number;
   take?: number;
 };
 
 const buildWhere = ({ search, categories, onSale }: ProductFilters): Prisma.ProductWhereInput => ({
-  Name: search
-    ? {
-        contains: search,
-      }
+  OR: search
+    ? [
+        {
+          Name: {
+            contains: search,
+          },
+        },
+        {
+          Category: {
+            contains: search,
+          },
+        },
+        {
+          Description: {
+            contains: search,
+          },
+        },
+      ]
     : undefined,
   Category:
     categories && categories.length > 0
@@ -28,15 +43,29 @@ const buildWhere = ({ search, categories, onSale }: ProductFilters): Prisma.Prod
     : undefined,
 });
 
+const buildOrderBy = (sort?: string): Prisma.ProductOrderByWithRelationInput => {
+  if (sort === "price-asc") {
+    return { Price: "asc" };
+  }
+
+  if (sort === "price-desc") {
+    return { Price: "desc" };
+  }
+
+  if (sort === "name-asc") {
+    return { Name: "asc" };
+  }
+
+  return { ProductID: "desc" };
+};
+
 export class ProductRepository {
   findMany(filters: ProductFilters) {
     return prisma.product.findMany({
       where: buildWhere(filters),
       skip: filters.skip,
       take: filters.take,
-      orderBy: {
-        ProductID: "desc",
-      },
+      orderBy: buildOrderBy(filters.sort),
     });
   }
 

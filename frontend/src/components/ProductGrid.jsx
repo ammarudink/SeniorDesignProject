@@ -5,6 +5,7 @@ export default function ProductGrid({
   products,
   emptyTitle = "No products found",
   desktopColumns = 4,
+  onWishlistChange,
 }) {
   if (!products.length) {
     return <EmptyState title={emptyTitle} description="Try changing the current filter." />;
@@ -12,13 +13,17 @@ export default function ProductGrid({
 
   const gridClassName =
     desktopColumns === 3
-      ? "row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-3"
-      : "row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4";
+      ? "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      : "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
   return (
     <div className={gridClassName}>
       {products.map((product) => (
-        <ProductCard key={product.ProductID} product={product} />
+        <ProductCard
+          key={product.ProductID}
+          product={product}
+          onWishlistChange={onWishlistChange}
+        />
       ))}
     </div>
   );

@@ -3,6 +3,7 @@ import { ProductController } from "../controllers/product.controller";
 import { ROLES } from "../constants/roles";
 import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
+import { attachUploadedProductImage, uploadProductImage } from "../middleware/upload.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { asyncHandler } from "../utils/async-handler";
 import {
@@ -38,6 +39,8 @@ router.post(
   "/",
   authenticate,
   authorize(ROLES.ADMIN),
+  uploadProductImage,
+  asyncHandler(attachUploadedProductImage),
   validate({ body: createProductSchema }),
   asyncHandler(controller.create),
 );
@@ -45,6 +48,8 @@ router.patch(
   "/:productId",
   authenticate,
   authorize(ROLES.ADMIN),
+  uploadProductImage,
+  asyncHandler(attachUploadedProductImage),
   validate({ params: productIdParamsSchema, body: updateProductSchema }),
   asyncHandler(controller.update),
 );

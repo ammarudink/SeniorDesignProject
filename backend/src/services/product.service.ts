@@ -9,6 +9,7 @@ type ListProductsInput = {
   search?: string;
   categories?: string[];
   onSale?: boolean;
+  sort?: string;
 };
 
 type UpsertProductInput = {
@@ -18,6 +19,7 @@ type UpsertProductInput = {
   Category?: string;
   Images?: string;
   Description?: string;
+  Stock?: number;
 };
 
 export class ProductService {
@@ -79,6 +81,7 @@ export class ProductService {
       Category: payload.Category!,
       Images: payload.Images!,
       Description: payload.Description!,
+      Stock: payload.Stock!,
     });
 
     return serializeProduct(product);

@@ -48,10 +48,19 @@ export const productService = {
     return response.data || [];
   },
 
+  async createProduct(payload) {
+    const response = await apiRequest("/products", {
+      method: "POST",
+      headers: payload instanceof FormData ? {} : { "Content-Type": "application/json" },
+      body: payload,
+    });
+    return response.data;
+  },
+
   async updateProduct(productId, payload) {
     const response = await apiRequest(`/products/${productId}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: payload instanceof FormData ? {} : { "Content-Type": "application/json" },
       body: payload,
     });
     return response.data;

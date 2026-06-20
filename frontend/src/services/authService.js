@@ -1,5 +1,7 @@
 import { apiRequest } from "./api";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+
 export const authService = {
   login(credentials) {
     return apiRequest("/auth/login", {
@@ -19,5 +21,13 @@ export const authService = {
 
   getProfile() {
     return apiRequest("/auth/me");
+  },
+
+  getProviders() {
+    return apiRequest("/auth/providers");
+  },
+
+  getGoogleLoginUrl() {
+    return `${API_BASE_URL}/auth/google`;
   },
 };

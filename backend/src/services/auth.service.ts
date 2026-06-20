@@ -20,6 +20,11 @@ type LoginInput = {
   Password: string;
 };
 
+type SsoInput = {
+  email: string;
+  name: string;
+};
+
 const sanitizeUser = (user: User) => ({
   UserID: user.UserID,
   Name: user.Name,
@@ -34,7 +39,7 @@ const isLegacyPhpBcryptHash = (value: string) => /^\$2y\$\d{2}\$/.test(value);
 export class AuthService {
   constructor(private readonly userRepository = new UserRepository()) {}
 
-  private signToken(user: User) {
+  signToken(user: User) {
     return jwt.sign(
       {
         sub: user.UserID,
@@ -126,6 +131,24 @@ export class AuthService {
         Password: upgradedPassword,
       });
     }
+
+    return {
+      user: sanitizeUser(user),
+      token: this.signToken(user),
+    };
+  }
+
+  async loginWithSso(payload: SsoInput) {
+    const existingUser = await this.userRepository.findByEmail(payload.email);
+    const user =
+      existingUser ??
+      (await this.userRepository.create({
+        Name: payload.name,
+        Email: payload.email,
+        Password: await this.hashPassword(`${payload.email}:${Date.now()}:${Math.random()}`),
+        Address: "OAuth user",
+        Role: ROLES.CUSTOMER,
+      }));
 
     return {
       user: sanitizeUser(user),

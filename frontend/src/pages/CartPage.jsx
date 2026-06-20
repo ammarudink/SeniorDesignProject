@@ -37,6 +37,10 @@ export default function CartPage() {
       }, 0),
     [items],
   );
+  const hasStockIssues = useMemo(
+    () => items.some((item) => Number(item.Quantity || 0) > Number(item.Product?.Stock ?? 0)),
+    [items],
+  );
 
   async function updateQuantity(cartId, nextQuantity) {
     try {
@@ -63,15 +67,15 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container py-5">
-      <h2 className="mb-4 text-center">Shopping Cart</h2>
+    <div className="container py-5 px-3 sm:px-4">
+      <h2 className="mb-4 text-center text-2xl font-bold">Shopping Cart</h2>
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {!items.length ? (
         <EmptyState title="Your cart is empty" description="Add some products and come back." />
       ) : (
         <div className="row g-4">
           <div className="col-lg-8">
-            <div className="table-responsive">
+            <div className="table-responsive rounded-lg border border-slate-200">
             <table className="table">
               <thead>
                 <tr>
@@ -85,11 +89,13 @@ export default function CartPage() {
               <tbody>
                 {items.map((item) => {
                   const price = Number(item.Product?.SalePrice || item.Product?.Price || 0);
+                  const stock = Number(item.Product?.Stock ?? 0);
+                  const stockIssue = Number(item.Quantity || 0) > stock;
                   const lineTotal = price * Number(item.Quantity || 0);
                   return (
                     <tr key={item.CartID}>
                       <td>
-                        <div className="d-flex align-items-center gap-3">
+                        <div className="d-flex align-items-center gap-3 min-w-56">
                           <img
                             src={resolveAssetPath(item.Product?.Images)}
                             alt={item.Product?.Name || "Product"}
@@ -98,6 +104,9 @@ export default function CartPage() {
                           <div>
                             <div className="fw-semibold">{item.Product?.Name || "Unknown Product"}</div>
                             <div className="text-muted small">{item.Product?.Category || "Uncategorized"}</div>
+                            <div className={`small fw-semibold ${stockIssue ? "text-danger" : "text-muted"}`}>
+                              {stock > 0 ? `${stock} in stock` : "Out of stock"}
+                            </div>
                           </div>
                         </div>
                       </td>
@@ -116,6 +125,7 @@ export default function CartPage() {
                             className="quantity-control-button"
                             type="button"
                             onClick={() => updateQuantity(item.CartID, item.Quantity + 1)}
+                            disabled={item.Quantity >= stock}
                           >
                             +
                           </button>
@@ -123,7 +133,7 @@ export default function CartPage() {
                       </td>
                       <td>{lineTotal.toFixed(2)} KM</td>
                       <td>
-                        <button className="btn btn-sm btn-danger" type="button" onClick={() => removeItem(item.CartID)}>
+                        <button className="btn btn-sm btn-danger min-h-10" type="button" onClick={() => removeItem(item.CartID)}>
                           Remove
                         </button>
                       </td>
@@ -135,7 +145,7 @@ export default function CartPage() {
           </div>
           </div>
           <div className="col-lg-4">
-            <div className="card border-0 shadow-sm">
+            <div className="card border-0 shadow-sm rounded-lg">
               <div className="card-body p-4">
                 <h3 className="h5 fw-bolder mb-4">Order Summary</h3>
                 <div className="d-flex justify-content-between mb-2">
@@ -154,9 +164,20 @@ export default function CartPage() {
                   <span>Total</span>
                   <span>{total.toFixed(2)} KM</span>
                 </div>
-                <Link to="/checkout" className="btn btn-dark w-100">
-                  Proceed to Checkout
-                </Link>
+                {hasStockIssues ? (
+                  <>
+                    <div className="alert alert-danger py-2">
+                      Update cart quantities before checkout.
+                    </div>
+                    <button className="btn btn-dark w-100 min-h-12" type="button" disabled>
+                      Proceed to Checkout
+                    </button>
+                  </>
+                ) : (
+                  <Link to="/checkout" className="btn btn-dark w-100 min-h-12">
+                    Proceed to Checkout
+                  </Link>
+                )}
               </div>
             </div>
           </div>
