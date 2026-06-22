@@ -8,10 +8,15 @@ export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("user_token");
   const { method = "GET", body, headers = {} } = options;
 
+  const isFormData = body instanceof FormData;
   const requestHeaders = {
     Accept: "application/json",
     ...headers,
   };
+
+  if (isFormData) {
+    delete requestHeaders["Content-Type"];
+  }
 
   if (token) {
     requestHeaders.Authorization = `Bearer ${token}`;
@@ -20,7 +25,7 @@ export async function apiRequest(endpoint, options = {}) {
   const response = await fetch(buildUrl(endpoint), {
     method,
     headers: requestHeaders,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body !== undefined ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const contentType = response.headers.get("content-type") || "";

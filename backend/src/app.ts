@@ -2,6 +2,7 @@ import compression from "compression";
 import cors from "cors";
 import express from "express";
 import helmet from "helmet";
+import passport from "passport";
 import swaggerUi from "swagger-ui-express";
 import { env } from "./config/env";
 import { openApiSpec } from "./docs/openapi";
@@ -46,6 +47,7 @@ app.use(
   }),
 );
 app.use(compression());
+app.use(passport.initialize());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -5,13 +5,23 @@ import { authenticate } from "../middleware/auth.middleware";
 import { authorize } from "../middleware/authorize.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { asyncHandler } from "../utils/async-handler";
-import { createPaymentSchema } from "../validators/payment.validator";
+import {
+  createPaymentSchema,
+  createStripeCheckoutSessionSchema,
+} from "../validators/payment.validator";
 
 const router = Router();
 const controller = new PaymentController();
 
 router.use(authenticate);
 router.get("/", authorize(ROLES.ADMIN), asyncHandler(controller.list));
+router.get("/providers", asyncHandler(controller.providers));
+router.post(
+  "/create-checkout-session",
+  validate({ body: createStripeCheckoutSessionSchema }),
+  asyncHandler(controller.createStripeCheckoutSession),
+);
+router.get("/stripe/success", asyncHandler(controller.completeStripeCheckout));
 router.post("/", validate({ body: createPaymentSchema }), asyncHandler(controller.create));
 
 export { router as paymentRoutes };

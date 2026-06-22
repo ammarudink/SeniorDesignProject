@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextFunction, Request, Response } from "express";
+import multer from "multer";
 import { logger } from "../config/logger";
 import { ApiError } from "../utils/api-error";
 
@@ -18,11 +19,45 @@ export const errorHandler = (
     return;
   }
 
+  if (error instanceof multer.MulterError) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof Error && error.message === "Only image uploads are allowed") {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+    return;
+  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2000") {
+      res.status(400).json({
+        success: false,
+        message: "One of the submitted product values is too long",
+        errors: error.meta,
+      });
+      return;
+    }
+
     if (error.code === "P2002") {
       res.status(409).json({
         success: false,
         message: "A record with the same unique field already exists",
+      });
+      return;
+    }
+
+    if (error.code === "P2003") {
+      res.status(400).json({
+        success: false,
+        message: "The submitted product references invalid related data",
+        errors: error.meta,
       });
       return;
     }

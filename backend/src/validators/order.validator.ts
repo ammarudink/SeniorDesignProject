@@ -19,6 +19,7 @@ export const createOrderSchema = z.object({
     PAYMENT_METHODS.CASH,
     PAYMENT_METHODS.BANK_TRANSFER,
     PAYMENT_METHODS.CREDIT_CARD,
+    PAYMENT_METHODS.STRIPE,
   ]),
   CardNumber: z.string().regex(/^\d{16}$/).optional(),
   ExpirationDate: z.string().regex(/^(0[1-9]|1[0-2])\/\d{2}$/).optional(),
@@ -58,7 +59,7 @@ export const updateOrderStatusSchema = z.object({
   Status: z.enum([
     ORDER_STATUSES.PENDING,
     ORDER_STATUSES.SHIPPED,
-    ORDER_STATUSES.DELIVERED,
+    ORDER_STATUSES.ACCEPTED,
     ORDER_STATUSES.CANCELLED,
   ]),
 });

@@ -6,6 +6,8 @@ import { orderService } from "@/services/orderService";
 import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
 
+const ORDER_STATUSES = ["Pending", "Shipped", "Accepted", "Cancelled"];
+
 function formatPaymentMethod(value) {
   if (!value) {
     return "Not recorded";
@@ -24,10 +26,28 @@ export default function ProfilePage() {
   const [orders, setOrders] = useState([]);
   const [catalog, setCatalog] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState("");
-  const [priceForm, setPriceForm] = useState({ Price: "", SalePrice: "" });
+  const [priceForm, setPriceForm] = useState({
+    Price: "",
+    SalePrice: "",
+    Stock: "",
+    Images: "",
+    ImageFile: null,
+  });
+  const [createForm, setCreateForm] = useState({
+    Name: "",
+    Category: "",
+    Description: "",
+    Price: "",
+    SalePrice: "",
+    Stock: "",
+    Images: "",
+    ImageFile: null,
+  });
   const [expandedOrderId, setExpandedOrderId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -71,6 +91,9 @@ export default function ProfilePage() {
                 firstProduct.SalePrice === null || firstProduct.SalePrice === undefined
                   ? ""
                   : String(firstProduct.SalePrice),
+              Stock: String(firstProduct.Stock ?? 0),
+              Images: firstProduct.Images || "",
+              ImageFile: null,
             });
           }
         }
@@ -110,6 +133,9 @@ export default function ProfilePage() {
         selectedProduct.SalePrice === null || selectedProduct.SalePrice === undefined
           ? ""
           : String(selectedProduct.SalePrice),
+      Stock: String(selectedProduct.Stock ?? 0),
+      Images: selectedProduct.Images || "",
+      ImageFile: null,
     });
   }, [selectedProduct]);
 
@@ -151,10 +177,26 @@ export default function ProfilePage() {
     setSuccess("");
 
     try {
-      await productService.updateProduct(selectedProductId, {
-        Price: Number(priceForm.Price),
-        SalePrice: priceForm.SalePrice === "" ? null : Number(priceForm.SalePrice),
-      });
+      const payload = priceForm.ImageFile
+        ? new FormData()
+        : {
+            Price: Number(priceForm.Price),
+            SalePrice: priceForm.SalePrice === "" ? null : Number(priceForm.SalePrice),
+            Stock: Number(priceForm.Stock),
+            ...(priceForm.Images.trim() ? { Images: priceForm.Images.trim() } : {}),
+          };
+
+      if (payload instanceof FormData) {
+        payload.append("Price", String(Number(priceForm.Price)));
+        payload.append("SalePrice", priceForm.SalePrice === "" ? "" : String(Number(priceForm.SalePrice)));
+        payload.append("Stock", String(Number(priceForm.Stock)));
+        if (priceForm.Images.trim()) {
+          payload.append("Images", priceForm.Images.trim());
+        }
+        payload.append("ImageFile", priceForm.ImageFile);
+      }
+
+      await productService.updateProduct(selectedProductId, payload);
 
       setSuccess("Product updated successfully");
 
@@ -168,16 +210,92 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleCreateProduct(event) {
+    event.preventDefault();
+
+    setCreatingProduct(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const payload = createForm.ImageFile
+        ? new FormData()
+        : {
+            Name: createForm.Name.trim(),
+            Category: createForm.Category.trim(),
+            Description: createForm.Description.trim(),
+            Price: Number(createForm.Price),
+            SalePrice: createForm.SalePrice === "" ? undefined : Number(createForm.SalePrice),
+            Stock: Number(createForm.Stock),
+            Images: createForm.Images.trim(),
+          };
+
+      if (payload instanceof FormData) {
+        payload.append("Name", createForm.Name.trim());
+        payload.append("Category", createForm.Category.trim());
+        payload.append("Description", createForm.Description.trim());
+        payload.append("Price", String(Number(createForm.Price)));
+        payload.append("SalePrice", createForm.SalePrice === "" ? "" : String(Number(createForm.SalePrice)));
+        payload.append("Stock", String(Number(createForm.Stock)));
+        if (createForm.Images.trim()) {
+          payload.append("Images", createForm.Images.trim());
+        }
+        payload.append("ImageFile", createForm.ImageFile);
+      }
+
+      const createdProduct = await productService.createProduct(payload);
+
+      setSuccess("Product created successfully");
+      setCreateForm({
+        Name: "",
+        Category: "",
+        Description: "",
+        Price: "",
+        SalePrice: "",
+        Stock: "",
+        Images: "",
+        ImageFile: null,
+      });
+
+      const productResult = await productService.getProducts({ page: 1, limit: 100 });
+      const allProducts = productResult.products || [];
+      setCatalog(allProducts);
+      setSelectedProductId(String(createdProduct.ProductID));
+    } catch (reason) {
+      setError(reason.message || "Failed to create product");
+    } finally {
+      setCreatingProduct(false);
+    }
+  }
+
+  async function handleUpdateOrderStatus(orderId, status) {
+    setUpdatingOrderId(orderId);
+    setError("");
+    setSuccess("");
+
+    try {
+      const updatedOrder = await orderService.updateOrderStatus(orderId, status);
+      setOrders((currentOrders) =>
+        currentOrders.map((order) => (order.OrderID === orderId ? updatedOrder : order)),
+      );
+      setSuccess(`Order #${orderId} status updated`);
+    } catch (reason) {
+      setError(reason.message || "Failed to update order status");
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  }
+
   if (loading) {
     return <LoadingSpinner label="Loading profile..." />;
   }
 
   return (
-    <div className="container py-5">
+    <div className="container py-5 px-3 sm:px-4">
       {error ? <div className="alert alert-danger">{error}</div> : null}
       {success ? <div className="alert alert-success">{success}</div> : null}
 
-      <div className="card mb-4">
+      <div className="card mb-4 rounded-lg shadow-sm">
         <div className="card-header">
           <h2 className="h4 mb-0">Profile</h2>
         </div>
@@ -201,7 +319,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="card mb-4">
+      <div className="card mb-4 rounded-lg shadow-sm">
         <div className="card-header">
           <h2 className="h4 mb-0">Order History</h2>
         </div>
@@ -223,13 +341,33 @@ export default function ProfilePage() {
                   {orders.map((order) => {
                     const isExpanded = expandedOrderId === order.OrderID;
                     const payment = order.Payments?.[0];
+                    const isUpdatingOrder = updatingOrderId === order.OrderID;
 
                     return (
                       <Fragment key={order.OrderID}>
                         <tr>
                           <td>{order.OrderID}</td>
                           <td>{Number(order.TotalAmount || 0).toFixed(2)} KM</td>
-                          <td>{order.Status}</td>
+                          <td>
+                            {profile?.Role === "Admin" ? (
+                              <select
+                                className="form-select form-select-sm order-status-select"
+                                value={order.Status}
+                                disabled={isUpdatingOrder}
+                                onChange={(event) =>
+                                  handleUpdateOrderStatus(order.OrderID, event.target.value)
+                                }
+                              >
+                                {ORDER_STATUSES.map((status) => (
+                                  <option key={status} value={status}>
+                                    {status}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              order.Status
+                            )}
+                          </td>
                           <td className="text-end">
                             <button
                               type="button"
@@ -311,112 +449,336 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="d-flex flex-column flex-sm-row justify-content-between align-items-stretch align-items-sm-center gap-3">
         <button
           type="button"
-          className="btn btn-danger"
+          className="btn btn-danger min-h-11"
           onClick={handleDeleteAccount}
           disabled={deleting}
         >
           {deleting ? "Deleting..." : "Delete Account"}
         </button>
         {profile?.Role === "Admin" ? (
-          <button
-            type="button"
-            className="btn btn-primary"
-            data-bs-toggle="modal"
-            data-bs-target="#adminProductModal"
-          >
-            Update Product Prices
-          </button>
+          <div className="d-flex flex-column flex-sm-row gap-2">
+            <button
+              type="button"
+              className="btn btn-outline-dark min-h-11"
+              data-bs-toggle="modal"
+              data-bs-target="#adminCreateProductModal"
+            >
+              Add Product
+            </button>
+            <button
+              type="button"
+              className="btn btn-dark min-h-11"
+              data-bs-toggle="modal"
+              data-bs-target="#adminProductModal"
+            >
+              Update Product
+            </button>
+          </div>
         ) : null}
       </div>
 
       {profile?.Role === "Admin" ? (
-        <div
-          className="modal fade"
-          id="adminProductModal"
-          tabIndex="-1"
-          aria-labelledby="adminProductModalLabel"
-          aria-hidden="true"
-        >
-          <div className="modal-dialog modal-dialog-centered modal-lg">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h3 className="modal-title h5" id="adminProductModalLabel">
-                  Update Product Prices
-                </h3>
-                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
-              </div>
-              <form onSubmit={handleUpdateProduct}>
-                <div className="modal-body">
-                  <div className="row g-3">
-                    <div className="col-12">
-                      <label htmlFor="adminProductSelect" className="form-label">
-                        Select Product
-                      </label>
-                      <select
-                        id="adminProductSelect"
-                        className="form-select"
-                        value={selectedProductId}
-                        onChange={(event) => setSelectedProductId(event.target.value)}
-                      >
-                        {catalog.map((product) => (
-                          <option key={product.ProductID} value={product.ProductID}>
-                            {product.Name} - Current Price: {product.Price}KM
-                            {product.SalePrice ? ` (Sale: ${product.SalePrice}KM)` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="col-md-6">
-                      <label htmlFor="adminPrice" className="form-label">
-                        New Price
-                      </label>
-                      <input
-                        id="adminPrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="form-control"
-                        value={priceForm.Price}
-                        onChange={(event) =>
-                          setPriceForm((previous) => ({ ...previous, Price: event.target.value }))
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="col-md-6">
-                      <label htmlFor="adminSalePrice" className="form-label">
-                        Sale Price
-                      </label>
-                      <input
-                        id="adminSalePrice"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className="form-control"
-                        value={priceForm.SalePrice}
-                        onChange={(event) =>
-                          setPriceForm((previous) => ({ ...previous, SalePrice: event.target.value }))
-                        }
-                        placeholder="Leave empty to remove"
-                      />
+        <>
+          <div
+            className="modal fade"
+            id="adminCreateProductModal"
+            tabIndex="-1"
+            aria-labelledby="adminCreateProductModalLabel"
+            aria-hidden="true"
+          >
+            <div className="modal-dialog modal-dialog-centered modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3 className="modal-title h5" id="adminCreateProductModalLabel">
+                    Add Product
+                  </h3>
+                  <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                </div>
+                <form onSubmit={handleCreateProduct}>
+                  <div className="modal-body">
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <label htmlFor="createProductName" className="form-label">
+                          Product Name
+                        </label>
+                        <input
+                          id="createProductName"
+                          className="form-control min-h-11"
+                          maxLength={255}
+                          value={createForm.Name}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Name: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="createProductCategory" className="form-label">
+                          Category
+                        </label>
+                        <input
+                          id="createProductCategory"
+                          className="form-control min-h-11"
+                          maxLength={100}
+                          value={createForm.Category}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Category: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="createProductPrice" className="form-label">
+                          Price
+                        </label>
+                        <input
+                          id="createProductPrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={createForm.Price}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Price: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="createProductSalePrice" className="form-label">
+                          Sale Price
+                        </label>
+                        <input
+                          id="createProductSalePrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={createForm.SalePrice}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, SalePrice: event.target.value }))
+                          }
+                          placeholder="Optional"
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="createProductStock" className="form-label">
+                          Stock Quantity
+                        </label>
+                        <input
+                          id="createProductStock"
+                          type="number"
+                          step="1"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={createForm.Stock}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Stock: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label htmlFor="createProductDescription" className="form-label">
+                          Description
+                        </label>
+                        <textarea
+                          id="createProductDescription"
+                          className="form-control"
+                          maxLength={255}
+                          rows="3"
+                          value={createForm.Description}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Description: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label htmlFor="createProductImageUrl" className="form-label">
+                          Product Image URL
+                        </label>
+                        <input
+                          id="createProductImageUrl"
+                          className="form-control min-h-11"
+                          maxLength={255}
+                          value={createForm.Images}
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({ ...previous, Images: event.target.value }))
+                          }
+                          placeholder="https://your-project-id.supabase.co/storage/v1/object/public/product-images/..."
+                          required={!createForm.ImageFile}
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label htmlFor="createProductImageFile" className="form-label">
+                          Upload Product Image
+                        </label>
+                        <input
+                          id="createProductImageFile"
+                          type="file"
+                          accept="image/*"
+                          className="form-control"
+                          onChange={(event) =>
+                            setCreateForm((previous) => ({
+                              ...previous,
+                              ImageFile: event.target.files?.[0] || null,
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
-                    Close
-                  </button>
-                  <button className="btn btn-primary" type="submit" disabled={savingProduct}>
-                    {savingProduct ? "Updating..." : "Update Product"}
-                  </button>
-                </div>
-              </form>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
+                      Close
+                    </button>
+                    <button className="btn btn-dark" type="submit" disabled={creatingProduct}>
+                      {creatingProduct ? "Creating..." : "Create Product"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+
+          <div
+            className="modal fade"
+            id="adminProductModal"
+            tabIndex="-1"
+            aria-labelledby="adminProductModalLabel"
+            aria-hidden="true"
+          >
+            <div className="modal-dialog modal-dialog-centered modal-lg">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3 className="modal-title h5" id="adminProductModalLabel">
+                    Update Product
+                  </h3>
+                  <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
+                </div>
+                <form onSubmit={handleUpdateProduct}>
+                  <div className="modal-body">
+                    <div className="row g-3">
+                      <div className="col-12">
+                        <label htmlFor="adminProductSelect" className="form-label">
+                          Select Product
+                        </label>
+                        <select
+                          id="adminProductSelect"
+                          className="form-select min-h-11"
+                          value={selectedProductId}
+                          onChange={(event) => setSelectedProductId(event.target.value)}
+                        >
+                          {catalog.map((product) => (
+                            <option key={product.ProductID} value={product.ProductID}>
+                              {product.Name} - Current Price: {product.Price}KM
+                              {product.SalePrice ? ` (Sale: ${product.SalePrice}KM)` : ""} - Stock: {product.Stock ?? 0}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="adminPrice" className="form-label">
+                          New Price
+                        </label>
+                        <input
+                          id="adminPrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={priceForm.Price}
+                          onChange={(event) =>
+                            setPriceForm((previous) => ({ ...previous, Price: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="adminSalePrice" className="form-label">
+                          Sale Price
+                        </label>
+                        <input
+                          id="adminSalePrice"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={priceForm.SalePrice}
+                          onChange={(event) =>
+                            setPriceForm((previous) => ({ ...previous, SalePrice: event.target.value }))
+                          }
+                          placeholder="Leave empty to remove"
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label htmlFor="adminStock" className="form-label">
+                          Stock Quantity
+                        </label>
+                        <input
+                          id="adminStock"
+                          type="number"
+                          step="1"
+                          min="0"
+                          className="form-control min-h-11"
+                          value={priceForm.Stock}
+                          onChange={(event) =>
+                            setPriceForm((previous) => ({ ...previous, Stock: event.target.value }))
+                          }
+                          required
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label htmlFor="adminImageUrl" className="form-label">
+                          Product Image URL
+                        </label>
+                        <input
+                          id="adminImageUrl"
+                          className="form-control min-h-11"
+                          maxLength={255}
+                          value={priceForm.Images}
+                          onChange={(event) =>
+                            setPriceForm((previous) => ({ ...previous, Images: event.target.value }))
+                          }
+                          placeholder="https://your-project-id.supabase.co/storage/v1/object/public/product-images/..."
+                        />
+                      </div>
+                      <div className="col-12">
+                        <label htmlFor="adminImageFile" className="form-label">
+                          Upload New Product Image
+                        </label>
+                        <input
+                          id="adminImageFile"
+                          type="file"
+                          accept="image/*"
+                          className="form-control"
+                          onChange={(event) =>
+                            setPriceForm((previous) => ({
+                              ...previous,
+                              ImageFile: event.target.files?.[0] || null,
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-outline-secondary" data-bs-dismiss="modal">
+                      Close
+                    </button>
+                    <button className="btn btn-dark" type="submit" disabled={savingProduct}>
+                      {savingProduct ? "Updating..." : "Update Product"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </>
       ) : null}
     </div>
   );

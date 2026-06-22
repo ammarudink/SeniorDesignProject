@@ -3,6 +3,8 @@ import { OrderRepository } from "../repositories/order.repository";
 import { PaymentRepository } from "../repositories/payment.repository";
 import { ApiError } from "../utils/api-error";
 import { validatePaymentPayload } from "../utils/payment-validation";
+import { OrderService } from "./order.service";
+import { StripeService } from "./stripe.service";
 
 type CreatePaymentInput = {
   OrderID: number;
@@ -12,10 +14,17 @@ type CreatePaymentInput = {
   Cvc?: string;
 };
 
+type CreateStripeCheckoutInput = {
+  successUrl?: string;
+  cancelUrl?: string;
+};
+
 export class PaymentService {
   constructor(
     private readonly paymentRepository = new PaymentRepository(),
     private readonly orderRepository = new OrderRepository(),
+    private readonly orderService = new OrderService(),
+    private readonly stripeService = new StripeService(),
   ) {}
 
   async getPayments(actor: { userId: number; role: string }) {
@@ -74,6 +83,64 @@ export class PaymentService {
     return {
       ...payment,
       Amount: Number(payment.Amount),
+    };
+  }
+
+  async createStripeCheckoutSession(
+    actor: { userId: number; role: string },
+    payload: CreateStripeCheckoutInput,
+  ) {
+    const order = await this.orderService.createOrder(actor.userId, {
+      useCart: true,
+      paymentMethod: PAYMENT_METHODS.STRIPE,
+    });
+
+    const session = await this.stripeService.createCheckoutSession({
+      orderId: Number(order.OrderID),
+      totalAmount: Number(order.TotalAmount),
+      successUrl: payload.successUrl,
+      cancelUrl: payload.cancelUrl,
+    });
+
+    return {
+      order,
+      checkoutUrl: session.url,
+      sessionId: session.id,
+    };
+  }
+
+  async completeStripeCheckout(sessionId: string) {
+    const session = await this.stripeService.retrieveCheckoutSession(sessionId);
+    const orderId = Number(session.metadata?.orderId);
+
+    if (!orderId) {
+      throw new ApiError(400, "Stripe session is missing an order reference");
+    }
+
+    const order = await this.orderRepository.findById(orderId);
+
+    if (!order) {
+      throw new ApiError(404, "Order not found");
+    }
+
+    const payment = order.Payments?.find(
+      (entry) => entry.PaymentMethod === PAYMENT_METHODS.STRIPE,
+    );
+
+    if (!payment?.PaymentID) {
+      throw new ApiError(404, "Stripe payment not found for order");
+    }
+
+    const paymentStatus =
+      session.payment_status === "paid" ? PAYMENT_STATUSES.COMPLETED : PAYMENT_STATUSES.FAILED;
+
+    const updatedPayment = await this.paymentRepository.update(payment.PaymentID, {
+      PaymentStatus: paymentStatus,
+    });
+
+    return {
+      ...updatedPayment,
+      Amount: Number(updatedPayment.Amount),
     };
   }
 }

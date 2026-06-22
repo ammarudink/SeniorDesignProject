@@ -15,7 +15,7 @@ enum UserRole {
 enum OrderStatus {
   Pending
   Shipped
-  Delivered
+  Accepted
   Cancelled
 }
 
@@ -48,6 +48,7 @@ model Product {
   Category      String         @db.VarChar(100)
   Images        String         @db.VarChar(255)
   Description   String         @db.VarChar(255)
+  Stock         Int            @default(0)
   CartItems     CartItem[]
   WishlistItems WishlistItem[]
   OrderItems    OrderItem[]

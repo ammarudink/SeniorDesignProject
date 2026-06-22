@@ -1,0 +1,10 @@
+process.env.NODE_ENV = "test";
+process.env.API_PREFIX = "/api/v1";
+process.env.DATABASE_URL = "mysql://test:test@localhost:3306/test";
+process.env.JWT_SECRET = "test_jwt_secret_that_is_at_least_32_chars";
+process.env.JWT_EXPIRES_IN = "1d";
+process.env.CORS_ORIGIN = "http://localhost:5173";
+process.env.FRONTEND_URL = "http://localhost:5173";
+process.env.SUPABASE_URL = "https://example.supabase.co";
+process.env.SUPABASE_SERVICE_ROLE_KEY = "test-service-role-key";
+process.env.SUPABASE_BUCKET = "product-images";

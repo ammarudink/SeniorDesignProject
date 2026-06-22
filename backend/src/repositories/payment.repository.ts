@@ -36,4 +36,11 @@ export class PaymentRepository {
       data,
     });
   }
+
+  update(paymentId: number, data: Prisma.PaymentUpdateInput) {
+    return prisma.payment.update({
+      where: { PaymentID: paymentId },
+      data,
+    });
+  }
 }

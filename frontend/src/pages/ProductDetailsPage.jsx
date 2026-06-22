@@ -48,8 +48,15 @@ export default function ProductDetailsPage() {
     () => (product ? isInWishlist(product.ProductID) : false),
     [product, isInWishlist],
   );
+  const stock = Number(product?.Stock ?? 0);
+  const outOfStock = stock <= 0;
 
   async function handleAddToCart() {
+    if (outOfStock) {
+      showToast("Product is out of stock", "danger");
+      return;
+    }
+
     if (!isAuthenticated) {
       navigate("/login");
       return;
@@ -117,13 +124,21 @@ export default function ProductDetailsPage() {
                   </>
                 ) : (
                   <span>{product.Price}KM</span>
-                )}
+              )}
+              </div>
+              <div className={`fw-semibold mb-3 ${outOfStock ? "text-danger" : "text-muted"}`}>
+                {outOfStock ? "Out of stock" : `${stock} in stock`}
               </div>
               <p className="lead">{product.Description || "No description available."}</p>
               <div className="d-flex align-items-center gap-2">
-                <button className="btn btn-outline-dark flex-shrink-0" type="button" onClick={handleAddToCart}>
+                <button
+                  className="btn btn-outline-dark flex-shrink-0"
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={outOfStock}
+                >
                   <i className="bi-cart-fill me-1" />
-                  Add to cart
+                  {outOfStock ? "Out of stock" : "Add to cart"}
                 </button>
                 <button className="btn btn-link p-0" type="button" onClick={handleWishlist}>
                   <img

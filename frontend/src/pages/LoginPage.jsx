@@ -1,6 +1,7 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { authService } from "@/services/authService";
 
 function validate(values) {
   const errors = {};
@@ -27,8 +28,30 @@ export default function LoginPage() {
   const [form, setForm] = useState({ Email: "", Password: "" });
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState("");
+  const [googleEnabled, setGoogleEnabled] = useState(false);
 
   const redirectTarget = useMemo(() => location.state?.from?.pathname || "/", [location]);
+
+  useEffect(() => {
+    let active = true;
+
+    authService
+      .getProviders()
+      .then((response) => {
+        if (active) {
+          setGoogleEnabled(Boolean(response.data?.google));
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setGoogleEnabled(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   if (isAuthenticated) {
     return <Navigate to={redirectTarget} replace />;
@@ -74,7 +97,9 @@ export default function LoginPage() {
                       className={`form-control ${errors.Email ? "is-invalid" : ""}`}
                       id="loginEmail"
                       value={form.Email}
-                      onChange={(event) => setForm((previous) => ({ ...previous, Email: event.target.value }))}
+                      onChange={(event) =>
+                        setForm((previous) => ({ ...previous, Email: event.target.value }))
+                      }
                     />
                     {errors.Email ? <div className="invalid-feedback">{errors.Email}</div> : null}
                   </div>
@@ -87,7 +112,9 @@ export default function LoginPage() {
                       className={`form-control ${errors.Password ? "is-invalid" : ""}`}
                       id="loginPassword"
                       value={form.Password}
-                      onChange={(event) => setForm((previous) => ({ ...previous, Password: event.target.value }))}
+                      onChange={(event) =>
+                        setForm((previous) => ({ ...previous, Password: event.target.value }))
+                      }
                     />
                     {errors.Password ? <div className="invalid-feedback">{errors.Password}</div> : null}
                   </div>
@@ -95,6 +122,11 @@ export default function LoginPage() {
                     <button type="submit" className="btn btn-custom btn-lg" disabled={loading}>
                       {loading ? "Loading..." : "Login"}
                     </button>
+                    {googleEnabled ? (
+                      <a className="btn btn-outline-dark btn-lg" href={authService.getGoogleLoginUrl()}>
+                        Continue with Google
+                      </a>
+                    ) : null}
                   </div>
                 </form>
               </div>
