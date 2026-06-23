@@ -42,3 +42,23 @@ jobs:
       - name: Build frontend
         run: npm run build
         working-directory: frontend
+
+  deploy:
+    name: Deploy to DigitalOcean App Platform
+    needs: test-and-build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: digitalocean-production
+      cancel-in-progress: true
+
+    steps:
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Create deployment
+        env:
+          DIGITALOCEAN_APP_ID: ${{ secrets.DIGITALOCEAN_APP_ID }}
+        run: doctl apps create-deployment "$DIGITALOCEAN_APP_ID" --wait
